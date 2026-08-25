@@ -1,0 +1,47 @@
+[
+  {
+    "case_id": "BENCH-CCI-01",
+    "description": "Severe Multi-organ Disease (MI, CHF, Complicated Diabetes, Renal Disease)",
+    "inputs": {
+      "patient_id": "PT-BENCH-01",
+      "age": 68,
+      "sex": "M",
+      "icd10_codes": "I21.9; I50.9; E11.21; N18.4"
+    },
+    "expected": {
+      "charlson_score": 6,
+      "charlson_age_adjusted": 8,
+      "elixhauser_count": 3
+    }
+  },
+  {
+    "case_id": "BENCH-CCI-02",
+    "description": "Metastatic Cancer Hierarchy Test (Metastatic Lung Cancer with Bone Mets)",
+    "inputs": {
+      "patient_id": "PT-BENCH-02",
+      "age": 62,
+      "sex": "F",
+      "icd10_codes": "C34.9; C77.0; C79.51"
+    },
+    "expected": {
+      "charlson_score": 6,
+      "charlson_age_adjusted": 8,
+      "charlson_conditions": ["Metastatic solid tumor"]
+    }
+  },
+  {
+    "case_id": "BENCH-CCI-03",
+    "description": "Young Healthy / Single Uncomplicated Comorbidity",
+    "inputs": {
+      "patient_id": "PT-BENCH-03",
+      "age": 32,
+      "sex": "F",
+      "icd10_codes": "E11.9"
+    },
+    "expected": {
+      "charlson_score": 1,
+      "charlson_age_adjusted": 1,
+      "mortality_risk_tier": "LOW"
+    }
+  }
+]
