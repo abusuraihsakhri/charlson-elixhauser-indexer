@@ -1,116 +1,53 @@
-# Charlson Elixhauser Indexer
+# Charlson Comorbidity Index & Elixhauser (van Walraven) Indexer
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
-
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
+> **Domain:** Health Services Research, Epidemiology, Risk Adjustment & Biostatistics  
+> **Clinical Guidelines & Standards:** Charlson et al. (J Chronic Dis 1987), Quan et al. ICD-10 Coding Algorithm (Med Care 2005, Am J Epidemiol 2011), Elixhauser et al. (Med Care 1998), van Walraven et al. (Med Care 2009), AHRQ Elixhauser Comorbidity Software Refined v2021+
 
 ---
 
-## 📖 What It Does
+## 📖 Clinical & Methodological Overview
 
-Charlson and Elixhauser Comorbidity Index Engine
-=================================================
-Calculates Charlson Comorbidity Index (CCI, Quan 2011 ICD-10 update of Charlson 1987)
-and Elixhauser Comorbidity Index (AHRQ 2021 refined, 31 categories) with van Walraven
-composite score and 10-year estimated survival calculation.
+The **Charlson & Elixhauser Comorbidity Indexer** extracts and maps secondary ICD-10 diagnosis codes to validated clinical comorbidity frameworks:
 
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+1. **Charlson Comorbidity Index (CCI)**: 17 weighted comorbidity categories (e.g., myocardial infarction, metastatic solid tumor, AIDS/HIV, moderate-to-severe liver disease) with age-adjustment and 10-year actuarial survival estimation ($S(10) = 0.983^{\exp(\text{CCI} \times 0.9)} \times 100\%$).
+2. **Elixhauser Comorbidity Measures**: 31 distinct chronic condition flags designed for administrative inpatient data.
+3. **van Walraven Composite Mortality Weighting**: Empirically derived integer weights (-19 to +89) predicting in-hospital and 30-day mortality.
 
----
+### Charlson Weight Categories (Quan et al. ICD-10 Mapping)
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+| Weight | Clinical Conditions |
+|:---|:---|
+| **1 pt** | Myocardial infarction, Congestive heart failure, Peripheral vascular disease, Cerebrovascular disease, Dementia, Chronic pulmonary disease, Rheumatic disease, Peptic ulcer disease, Mild liver disease, Diabetes without chronic complications |
+| **2 pts** | Hemiplegia or paraplegia, Renal disease, Diabetes with chronic complications, Any malignancy (lymphoma, leukemia, solid tumor) |
+| **3 pts** | Moderate or severe liver disease |
+| **6 pts** | Metastatic solid tumor, AIDS/HIV |
 
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`ComorbidityResult`** — dedicated module for comorbidity result evaluation and state verification.
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  """Calculates total count of active Elixhauser comorbidities."""
-  """Calculates van Walraven weighted composite score (-19 to +89)."""
-  c_score = charlson_score(c_flags)
-  effective_score = c_age if c_age is not None else c_score
-```
+*Age Adjustment:* +1 point per decade above 40 years (50–59: +1, 60–69: +2, 70–79: +3, $\ge 80$: +4).
 
 ---
 
 ## 💻 CLI Quickstart & Usage
 
-### 1. Guided Interactive Mode
+### 1. Score an Individual Patient ICD-10 Profile
 ```bash
-python cli.py
+python cli.py eval --patient-id P001 --age 68 --sex M --codes "I21.9, E11.65, I50.9, N18.3, J44.9"
 ```
 
-### 2. Direct Parameterized Evaluation
+### 2. Interactive ICD-10 Questionnaire
 ```bash
-python cli.py --id <value> --patient-id <value> --codes <value> --age <value>
+python cli.py interactive
 ```
 
-### Parameter Reference
-- `--id`: Specifies input measurement or parameter value.
-- `--patient-id`: Specifies input measurement or parameter value.
-- `--codes`: Specifies input measurement or parameter value.
-- `--age`: Specifies input measurement or parameter value.
-- `--sex`: Specifies input measurement or parameter value.
-- `--detail`: Specifies input measurement or parameter value.
-- `--json`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `case_id` | Parameter / observation metric | Required |
-| `description` | Parameter / observation metric | Required |
-| `inputs` | Parameter / observation metric | Required |
-| `expected` | Parameter / observation metric | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
-
+### 3. Batch Process Patient Diagnosis Cohort
 ```bash
-pytest -v
-```
-
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
+python cli.py batch -i sample.csv -o out_results.csv
 ```
 
 ---
 
-## 🐳 Container Deployment
+## 🧪 Verification & Testing
 
+Execute comprehensive test suite via pytest:
 ```bash
-docker build -t charlson-elixhauser-indexer .
-docker run -p 8000:8000 charlson-elixhauser-indexer
+python -m pytest -p no:zarr
 ```
