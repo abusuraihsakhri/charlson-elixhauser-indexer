@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Browser interface for calculating Charlson and Elixhauser comorbidity measures from ICD-10 codes.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Charlson & Elixhauser Indexer</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">CE</div>
+      <div>
+        <h1>Charlson &amp; Elixhauser Indexer</h1>
+        <p>ICD-10 comorbidity scoring in the browser</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="runtime-badge" class="status-badge" role="status" aria-live="polite">Loading Python…</span>
+      <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch to dark mode">Dark</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel input-panel" aria-labelledby="input-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Input</p>
+          <h2 id="input-title">Patient data</h2>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Input mode">
+          <button id="single-tab" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="single-pane">Single</button>
+          <button id="batch-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="batch-pane">Batch CSV</button>
+        </div>
+      </div>
+
+      <div id="single-pane" role="tabpanel" aria-labelledby="single-tab">
+        <form id="single-form" novalidate>
+          <div class="field-grid">
+            <label class="field">
+              <span>Patient ID</span>
+              <input id="patient-id" name="patient_id" value="P001" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>Age</span>
+              <input id="age" name="age" type="number" min="0" max="125" step="1" value="68" inputmode="numeric">
+            </label>
+            <label class="field">
+              <span>Sex</span>
+              <select id="sex" name="sex">
+                <option value="">Not specified</option>
+                <option value="F">Female</option>
+                <option value="M" selected>Male</option>
+                <option value="O">Other</option>
+                <option value="U">Unknown</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field code-field">
+            <span>ICD-10 codes <small>comma, semicolon, pipe, or whitespace separated</small></span>
+            <textarea id="codes" name="codes" rows="5" required spellcheck="false">I21.9; E11.65; I50.9; N18.3; J44.9</textarea>
+          </label>
+
+          <div class="button-row">
+            <button id="analyze-button" class="primary-button" type="submit" disabled>Analyze</button>
+            <button id="sample-button" class="secondary-button" type="button">Load example</button>
+            <button id="clear-button" class="secondary-button" type="button">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="batch-pane" role="tabpanel" aria-labelledby="batch-tab" hidden>
+        <div class="batch-box">
+          <label class="file-picker" for="csv-file">
+            <span class="file-title">Choose a CSV file</span>
+            <span class="file-help">Expected columns include patient_id, age, sex, and icd10_codes.</span>
+            <input id="csv-file" type="file" accept=".csv,text/csv">
+          </label>
+          <div class="button-row">
+            <button id="batch-button" class="primary-button" type="button" disabled>Process &amp; download</button>
+          </div>
+          <p id="batch-summary" class="batch-summary" role="status" aria-live="polite">No file selected.</p>
+        </div>
+      </div>
+
+      <p class="privacy-note">Entered data is processed locally in your browser. The Python runtime is loaded from jsDelivr; patient inputs are not sent by this app.</p>
+    </section>
+
+    <section class="panel result-panel" aria-labelledby="result-title">
+      <div class="panel-heading result-heading">
+        <div>
+          <p class="eyebrow">Output</p>
+          <h2 id="result-title">Results</h2>
+        </div>
+        <span id="result-context" class="context-label">Waiting for runtime</span>
+      </div>
+
+      <div id="result-empty" class="empty-state">
+        <strong>Ready when Python finishes loading.</strong>
+        <span>Enter ICD-10 codes and select Analyze.</span>
+      </div>
+
+      <div id="result-content" class="result-content" hidden>
+        <div class="metric-grid" aria-label="Calculated scores">
+          <article class="metric">
+            <span>Charlson score</span>
+            <strong id="metric-charlson">—</strong>
+          </article>
+          <article class="metric">
+            <span>Age-adjusted CCI</span>
+            <strong id="metric-age-adjusted">—</strong>
+          </article>
+          <article class="metric">
+            <span>Elixhauser count</span>
+            <strong id="metric-elix-count">—</strong>
+          </article>
+          <article class="metric">
+            <span>van Walraven</span>
+            <strong id="metric-vw">—</strong>
+          </article>
+        </div>
+
+        <div id="survival-row" class="estimate-row" hidden>
+          <span>Legacy 10-year survival estimate</span>
+          <strong id="survival-value">—</strong>
+        </div>
+
+        <div class="condition-grid">
+          <section>
+            <h3>Charlson conditions</h3>
+            <div id="charlson-conditions" class="chip-list"></div>
+          </section>
+          <section>
+            <h3>Elixhauser conditions</h3>
+            <div id="elixhauser-conditions" class="chip-list"></div>
+          </section>
+        </div>
+
+        <div id="warnings-box" class="warnings-box" hidden>
+          <h3>Warnings</h3>
+          <ul id="warnings-list"></ul>
+        </div>
+
+        <p class="method-note">Scores are research/administrative comorbidity measures, not a diagnosis or individualized mortality prediction. The legacy survival formula and repository-defined composite band should not be used for clinical decisions.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>MIT licensed</span>
+    <span>Python runs client-side with Pyodide 314.0.7</span>
+  </footer>
+</body>
+</html>

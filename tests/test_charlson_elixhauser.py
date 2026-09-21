@@ -83,10 +83,11 @@ class TestCharlsonCategories(unittest.TestCase):
         self.assertEqual(charlson_score(flags), 1)
 
     def test_diabetes_uncomplicated(self):
-        flags = charlson_flags(["E11.9"])
-        self.assertTrue(flags["Diabetes without complications"])
-        self.assertFalse(flags["Diabetes with complications"])
-        self.assertEqual(charlson_score(flags), 1)
+        for code in ("E11.9", "E11.65"):
+            flags = charlson_flags([code])
+            self.assertTrue(flags["Diabetes without complications"], code)
+            self.assertFalse(flags["Diabetes with complications"], code)
+            self.assertEqual(charlson_score(flags), 1, code)
 
     def test_diabetes_complicated(self):
         flags = charlson_flags(["E11.21"])
@@ -204,6 +205,13 @@ class TestPatientAssessmentAndBatch(unittest.TestCase):
         self.assertEqual(res.charlson_score, 1)
         self.assertTrue(len(res.warnings) > 0)
 
+    def test_implausible_age_is_not_scored(self):
+        res = assess_patient("PT-AGE", "I21.9", age=130)
+        self.assertIsNone(res.age)
+        self.assertIsNone(res.charlson_age_adjusted)
+        self.assertIsNone(res.charlson_10yr_survival_pct)
+        self.assertTrue(any("age-adjusted scoring was skipped" in w for w in res.warnings))
+
     def test_batch_csv_processing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             in_path = os.path.join(tmpdir, "patients.csv")
@@ -226,6 +234,17 @@ class TestPatientAssessmentAndBatch(unittest.TestCase):
                 self.assertEqual(len(rows), 2)
                 self.assertEqual(rows[0]["charlson_age_adjusted"], "5")
                 self.assertEqual(rows[1]["charlson_score"], "1")
+
+    def test_batch_requires_named_icd_column(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            in_path = os.path.join(tmpdir, "patients.csv")
+            out_path = os.path.join(tmpdir, "output.csv")
+            with open(in_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["patient_id", "age", "notes"])
+                writer.writeheader()
+                writer.writerow({"patient_id": "P1", "age": "72", "notes": "I21.9"})
+            with self.assertRaisesRegex(ValueError, "ICD code column"):
+                process_csv(in_path, out_path)
 
 
 class TestCLI(unittest.TestCase):

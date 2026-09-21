@@ -24,7 +24,7 @@ def format_patient_report(r: ComorbidityResult, detail: bool = False) -> str:
     lines = []
     lines.append("=" * 74)
     lines.append("  CHARLSON & ELIXHAUSER COMORBIDITY INDEX REPORT")
-    lines.append("  Standards: Quan 2011 (ICD-10 CCI) / AHRQ 2021 & van Walraven (2009)")
+    lines.append("  Methods: Charlson/Quan ICD-10 mapping + Elixhauser categories / van Walraven (2009)")
     lines.append("=" * 74)
 
     lines.append(f"\n  Patient Identifier:  {r.patient_id}")
@@ -36,7 +36,7 @@ def format_patient_report(r: ComorbidityResult, detail: bool = False) -> str:
     if r.charlson_age_adjusted is not None:
         lines.append(f"  * Age-Adjusted CCI Score:   {r.charlson_age_adjusted}")
     if r.charlson_10yr_survival_pct is not None:
-        lines.append(f"  * Estimated 10-Yr Survival: {r.charlson_10yr_survival_pct:.2f}%")
+        lines.append(f"  * Legacy 10-Yr Survival Est.: {r.charlson_10yr_survival_pct:.2f}%")
     cond_str = ", ".join(r.charlson_conditions) if r.charlson_conditions else "None detected"
     lines.append(f"  * CCI Conditions Met:       {cond_str}")
 
@@ -46,7 +46,7 @@ def format_patient_report(r: ComorbidityResult, detail: bool = False) -> str:
     elix_str = ", ".join(r.elix_conditions) if r.elix_conditions else "None detected"
     lines.append(f"  * ECI Conditions Met:       {elix_str}")
 
-    lines.append(f"\n  [Mortality Risk Tier]:      [{r.mortality_risk_tier}]")
+    lines.append(f"\n  [Heuristic Composite Band]: [{r.mortality_risk_tier}] (repository-defined; not validated)")
 
     if r.warnings:
         lines.append("\n  [!] Warnings:")
@@ -75,7 +75,7 @@ def interactive_mode():
 
     pid = input("Enter Patient ID [PT-001]: ").strip() or "PT-001"
     age_str = input("Enter Patient Age in years (e.g. 68) [optional]: ").strip()
-    age = float(age_str) if age_str else None
+    age = age_str or None
     sex = input("Enter Patient Sex (M/F) [optional]: ").strip() or None
 
     print("\nEnter ICD-10 diagnostic codes separated by commas, semicolons, or spaces.")
@@ -102,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("--detail", action="store_true", help="Display full 17 Charlson & 31 Elixhauser breakdown")
         s.add_argument("--json", action="store_true", help="Output results in JSON format")
 
-    subparsers.add_parser("interactive", help="Run interactive clinical ICD questionnaire")
+    subparsers.add_parser("interactive", help="Run an interactive ICD code entry session")
 
     b = subparsers.add_parser("batch", help="Process batch CSV dataset")
     b.add_argument("-i", "--input", required=True, help="Input CSV file path")
