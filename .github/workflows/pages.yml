@@ -42,3 +42,14 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify live site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 --retry-all-errors "${PAGE_URL}" -o /tmp/index.html
+          grep -q 'id="analyze-button"' /tmp/index.html
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 --retry-all-errors "${PAGE_URL}app.js" -o /tmp/app.js
+          grep -q "loadPyodide" /tmp/app.js
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 --retry-all-errors "${PAGE_URL}charlson_elixhauser.py" -o /tmp/engine.py
+          grep -q "def assess_patient" /tmp/engine.py
