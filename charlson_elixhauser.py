@@ -69,7 +69,6 @@ CHARLSON_DEFS: List[Tuple[str, int, Tuple[str, ...]]] = [
 ]
 
 DIABETES_PREFIXES = ("E10", "E11", "E12", "E13", "E14")
-DIAB_WO_SUFFIXES = ("0", "1", "6", "8", "9")
 DIAB_WC_SUFFIXES = ("2", "3", "4", "5", "7")
 
 
@@ -105,7 +104,7 @@ def charlson_flags(codes: List[str]) -> Dict[str, bool]:
     """Identifies active Charlson categories applying standard clinical hierarchy."""
     norm_codes = [normalize_icd(c) for c in codes if c]
     flags: Dict[str, bool] = {}
-    for label, weight, prefixes in CHARLSON_DEFS:
+    for label, _, prefixes in CHARLSON_DEFS:
         if label.startswith("Diabetes"):
             continue
         flags[label] = any(code_matches(c, prefixes) for c in norm_codes) if prefixes else False
