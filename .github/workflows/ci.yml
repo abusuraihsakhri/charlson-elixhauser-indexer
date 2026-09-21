@@ -26,6 +26,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
 
+    - name: Compile Python sources
+      run: |
+        python -m compileall -q charlson_elixhauser.py cli.py tests
+
     - name: Run Pytest Suite
       run: |
         pytest -v -p no:zarr
@@ -33,3 +37,11 @@ jobs:
     - name: Run CLI Batch Smoke Test
       run: |
         python cli.py batch -i sample.csv -o out_smoke.csv
+
+    - name: Run static web smoke test
+      run: |
+        test -s index.html
+        test -s app.js
+        test -s styles.css
+        grep -q "loadPyodide" app.js
+        grep -q "charlson_elixhauser.py" app.js

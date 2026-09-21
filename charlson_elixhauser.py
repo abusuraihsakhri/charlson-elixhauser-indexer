@@ -87,11 +87,12 @@ def classify_diabetes(codes: List[str]) -> Tuple[bool, bool]:
         if len(c) == 3:
             wo = True
             continue
-        remainder = c[3:]
-        if any(ch in DIAB_WC_SUFFIXES for ch in remainder[:2]):
+        # Quan-style diabetes grouping is determined by the first character
+        # after the three-character E1x category. Looking at later digits
+        # misclassifies codes such as E11.65 (hyperglycemia) as complicated.
+        category_digit = c[3]
+        if category_digit in DIAB_WC_SUFFIXES:
             wc = True
-        elif any(ch in DIAB_WO_SUFFIXES for ch in remainder[:2]):
-            wo = True
         else:
             wo = True
 
@@ -174,7 +175,7 @@ def charlson_10yr_survival(age_adjusted_score: Optional[int]) -> Optional[float]
 
 
 # ---------------------------------------------------------------------------
-# Elixhauser 31 Categories (AHRQ 2021) & van Walraven (vW 2009) Weights
+# Elixhauser 31 Categories & van Walraven (vW 2009) Weights
 # ---------------------------------------------------------------------------
 
 ELIXHAUSER_DEFS: List[Tuple[str, int, Tuple[str, ...]]] = [
@@ -300,7 +301,8 @@ def assess_patient(
         try:
             age = float(age)
             if age < 0 or age > 125:
-                warnings.append(f"Age {age} is clinically implausible (expected 0-125).")
+                warnings.append(f"Age {age} is clinically implausible (expected 0-125); age-adjusted scoring was skipped.")
+                age = None
         except (ValueError, TypeError):
             warnings.append(f"Could not parse age: {age!r}")
             age = None
@@ -321,13 +323,13 @@ def assess_patient(
 
     codes = [normalize_icd(p) for p in parts if p.strip()]
 
-    # Validate ICD syntax structure (Letter followed by digits)
+    # Validate ICD-10/ICD-10-CM structural syntax only; this is not a code-set lookup.
     valid_codes = []
     for c in codes:
-        if re.match(r"^[A-Z][0-9]", c):
+        if re.fullmatch(r"[A-Z][0-9][A-Z0-9]{1,5}", c):
             valid_codes.append(c)
         else:
-            warnings.append(f"Unrecognized non-ICD format code: {c!r}")
+            warnings.append(f"Unrecognized ICD-10 structure: {c!r}")
 
     c_flags = charlson_flags(valid_codes)
     c_score = charlson_score(c_flags)
@@ -340,7 +342,7 @@ def assess_patient(
     e_vw = elixhauser_van_walraven(e_flags)
     e_conds = [k for k, v in e_flags.items() if v]
 
-    # Overall mortality risk tiering
+    # Backwards-compatible repository heuristic. These thresholds are not a\n    # validated mortality prediction model and should not be used for clinical decisions.
     effective_score = c_age if c_age is not None else c_score
     if effective_score >= 6 or e_vw >= 15:
         tier = "VERY_HIGH"
@@ -407,8 +409,10 @@ def process_csv(input_path: str, output_path: str) -> List[ComorbidityResult]:
                 break
 
         if icd_col is None:
-            # Default to last column
-            icd_col = reader.fieldnames[-1]
+            raise ValueError(
+                "Input CSV must include an ICD code column named one of: "
+                "icd10_codes, icd_codes, codes, icd10, diagnoses, icd."
+            )
 
         age_col = lower_map.get("age") or lower_map.get("age_years")
         sex_col = lower_map.get("sex") or lower_map.get("gender")
