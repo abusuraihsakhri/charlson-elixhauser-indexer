@@ -342,7 +342,8 @@ def assess_patient(
     e_vw = elixhauser_van_walraven(e_flags)
     e_conds = [k for k, v in e_flags.items() if v]
 
-    # Backwards-compatible repository heuristic. These thresholds are not a\n    # validated mortality prediction model and should not be used for clinical decisions.
+    # Backwards-compatible repository heuristic. These thresholds are not a
+    # validated mortality prediction model and should not be used for clinical decisions.
     effective_score = c_age if c_age is not None else c_score
     if effective_score >= 6 or e_vw >= 15:
         tier = "VERY_HIGH"
