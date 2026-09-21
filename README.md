@@ -1,5 +1,7 @@
 # Charlson and Elixhauser Indexer
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/charlson-elixhauser-indexer/)
+
 A Python implementation of Charlson Comorbidity Index scoring, a 31-category Elixhauser comorbidity implementation, and van Walraven weighting from ICD-10-style diagnosis codes. The repository provides a command-line interface, batch CSV processing, and a browser interface that runs the same Python module with Pyodide.
 
 ## Features
