@@ -53,12 +53,11 @@ ICD input checking is structural and prefix-based. This project is not a complet
 ## Testing
 
 ~~~bash
-python -m pip install pytest
-python -m pytest -v -p no:zarr
+python -m unittest discover -s tests -p "test_*.py" -v
 python cli.py batch -i sample.csv -o out_smoke.csv
 ~~~
 
-CI also compiles the Python sources and checks that the static browser assets reference the Python runtime and scoring module.
+CI uses only the Python standard library for the test suite, compiles the Python sources, checks JavaScript syntax, and verifies that the static browser assets reference the Python runtime and scoring module.
 
 ## Browser compatibility
 
