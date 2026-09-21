@@ -40,6 +40,7 @@ jobs:
 
     - name: Run static web smoke test
       run: |
+        node --check app.js
         test -s index.html
         test -s app.js
         test -s styles.css
